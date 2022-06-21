@@ -6,14 +6,12 @@
 
 
 //Include Clipper to get the ClipperLib::IntPoint definition, which we reuse as Point definition.
-#include <polyclipping/clipper.hpp>
+#include "clipper.hpp"
 
 namespace cura
 {
 
 using coord_t = ClipperLib::cInt;
-
-static inline coord_t operator "" _mu(unsigned long long i) { return i; };
 
 #define INT2MM(n) (static_cast<double>(n) / 1000.0)
 #define INT2MM2(n) (static_cast<double>(n) / 1000000.0)

@@ -95,7 +95,7 @@ void SubDivCube::generateSubdivisionLines(const coord_t z, Polygons& result)
     }
     Polygons directional_line_groups[3];
 
-    generateSubdivisionLines(z, directional_line_groups);
+    generateSubdivisionLines(z, result, directional_line_groups);
 
     for (int dir_idx = 0; dir_idx < 3; dir_idx++)
     {
@@ -107,7 +107,7 @@ void SubDivCube::generateSubdivisionLines(const coord_t z, Polygons& result)
     }
 }
 
-void SubDivCube::generateSubdivisionLines(const coord_t z, Polygons (&directional_line_groups)[3])
+void SubDivCube::generateSubdivisionLines(const coord_t z, Polygons& result, Polygons (&directional_line_groups)[3])
 {
     CubeProperties cube_properties = cube_properties_per_recursion_step[depth];
 
@@ -144,7 +144,7 @@ void SubDivCube::generateSubdivisionLines(const coord_t z, Polygons (&directiona
     {
         if (children[idx] != nullptr)
         {
-            children[idx]->generateSubdivisionLines(z, directional_line_groups);
+            children[idx]->generateSubdivisionLines(z, result, directional_line_groups);
         }
     }
 }
@@ -233,12 +233,7 @@ coord_t SubDivCube::distanceFromPointToMesh(SliceMeshStorage& mesh, const LayerI
         return 2;
         *distance2 = 0;
     }
-    Polygons collide;
-    for (const SliceLayerPart& part : mesh.layers[layer_nr].parts)
-    {
-        collide.add(part.infill_area);
-    }
-
+    Polygons& collide = mesh.layers[layer_nr].getInnermostWalls(2, mesh);
     Point centerpoint = location;
     bool inside = collide.inside(centerpoint);
     ClosestPolygonPoint border_point = PolygonUtils::moveInside2(collide, centerpoint);

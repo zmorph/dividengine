@@ -28,7 +28,6 @@ public:
      * increased, all coordinates will go away from this origin.
      */
     static FMatrix4x3 scale(const Ratio scale, const Point3 origin);
-    static FMatrix4x3 scale(const Ratio scale_x, const Ratio scale_y, const Ratio scale_z, const Point3 origin);
 
     /*!
      * The matrix data, row-endian.

@@ -14,12 +14,13 @@ GyroidInfill::GyroidInfill() {
 GyroidInfill::~GyroidInfill() {
 }
 
-void GyroidInfill::generateTotalGyroidInfill(Polygons& result_lines, bool zig_zaggify, coord_t line_distance, const Polygons& in_outline, coord_t z)
+void GyroidInfill::generateTotalGyroidInfill(Polygons& result_lines, bool zig_zaggify, coord_t outline_offset, coord_t infill_line_width, coord_t line_distance, const Polygons& in_outline, coord_t z)
 {
     // generate infill based on the gyroid equation: sin_x * cos_y + sin_y * cos_z + sin_z * cos_x = 0
     // kudos to the author of the Slic3r implementation equation code, the equation code here is based on that
 
-    const AABB aabb(in_outline);
+    const Polygons outline = in_outline.offset(outline_offset);
+    const AABB aabb(outline);
 
     int pitch = line_distance * 2.41; // this produces similar density to the "line" infill pattern
     int num_steps = 4;
@@ -70,7 +71,7 @@ void GyroidInfill::generateTotalGyroidInfill(Polygons& result_lines, bool zig_za
                 for (unsigned i = 0; i < num_coords; ++i)
                 {
                     Point current(x + ((num_columns & 1) ? odd_line_coords[i] : even_line_coords[i])/2 + pitch, y + (coord_t)(i * step));
-                    bool current_inside = in_outline.inside(current, true);
+                    bool current_inside = outline.inside(current, true);
                     if (!is_first_point)
                     {
                         if (last_inside && current_inside)
@@ -83,8 +84,7 @@ void GyroidInfill::generateTotalGyroidInfill(Polygons& result_lines, bool zig_za
                             // line hits the boundary, add the part that's inside the boundary
                             Polygons line;
                             line.addLine(last, current);
-                            constexpr bool restitch = false; // only a single line doesn't need stitching
-                            line = in_outline.intersectionPolyLines(line, restitch);
+                            line = outline.intersectionPolyLines(line);
                             if (line.size() > 0)
                             {
                                 // some of the line is inside the boundary
@@ -162,7 +162,7 @@ void GyroidInfill::generateTotalGyroidInfill(Polygons& result_lines, bool zig_za
                 for (unsigned i = 0; i < num_coords; ++i)
                 {
                     Point current(x + (coord_t)(i * step), y + ((num_rows & 1) ? odd_line_coords[i] : even_line_coords[i])/2);
-                    bool current_inside = in_outline.inside(current, true);
+                    bool current_inside = outline.inside(current, true);
                     if (!is_first_point)
                     {
                         if (last_inside && current_inside)
@@ -175,8 +175,7 @@ void GyroidInfill::generateTotalGyroidInfill(Polygons& result_lines, bool zig_za
                             // line hits the boundary, add the part that's inside the boundary
                             Polygons line;
                             line.addLine(last, current);
-                            constexpr bool restitch = false; // only a single line doesn't need stitching
-                            line = in_outline.intersectionPolyLines(line, restitch);
+                            line = outline.intersectionPolyLines(line);
                             if (line.size() > 0)
                             {
                                 // some of the line is inside the boundary
@@ -234,7 +233,7 @@ void GyroidInfill::generateTotalGyroidInfill(Polygons& result_lines, bool zig_za
 
         int chain_ends_remaining = chains[0].size() * 2;
 
-        for (ConstPolygonRef outline_poly : in_outline)
+        for (ConstPolygonRef outline_poly : outline)
         {
             std::vector<Point> connector_points; // the points that make up a connector line
 
@@ -336,7 +335,10 @@ void GyroidInfill::generateTotalGyroidInfill(Polygons& result_lines, bool zig_za
 
                         if (chain_index != connector_start_chain_index && connected_to[(point_index + 1) % 2][chain_index] != connector_start_chain_index)
                         {
-                            result.add(connector_points);
+                            for (unsigned pi = 1; pi < connector_points.size(); ++pi)
+                            {
+                                result.addLine(connector_points[pi - 1], connector_points[pi]);
+                            }
                             drawing = false;
                             connector_points.clear();
                             // remember the connection
@@ -387,9 +389,15 @@ void GyroidInfill::generateTotalGyroidInfill(Polygons& result_lines, bool zig_za
             {
                 // output the connector line segments from the last chain to the first point in the outline
                 connector_points.push_back(outline_poly[0]);
-                result.add(connector_points);
+                for (unsigned pi = 1; pi < connector_points.size(); ++pi)
+                {
+                    result.addLine(connector_points[pi - 1], connector_points[pi]);
+                }
                 // output the connector line segments from the first point in the outline to the first chain
-                result.add(path_to_first_chain);
+                for (unsigned pi = 1; pi < path_to_first_chain.size(); ++pi)
+                {
+                    result.addLine(path_to_first_chain[pi - 1], path_to_first_chain[pi]);
+                }
             }
 
             if (chain_ends_remaining < 1)

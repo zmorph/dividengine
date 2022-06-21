@@ -9,7 +9,6 @@
 #include <unordered_map> //To track monotonic sequences.
 
 #include "PathOrder.h"
-#include "PathOrderPath.h"
 
 namespace cura
 {
@@ -41,7 +40,7 @@ template<typename PathType>
 class PathOrderMonotonic : public PathOrder<PathType>
 {
 public:
-    using Path = PathOrderPath<PathType>;
+    using typename PathOrder<PathType>::Path;
     using PathOrder<PathType>::coincident_point_distance;
 
     PathOrderMonotonic(const AngleRadians monotonic_direction, const coord_t max_adjacent_distance, const Point start_point)
@@ -62,7 +61,7 @@ public:
         //Get the vertex data and store it in the paths.
         for(Path& path : this->paths)
         {
-            path.converted = path.getVertexData();
+            path.converted = this->getVertexData(path.vertices);
         }
 
         std::vector<Path> reordered; //To store the result in. At the end, we'll std::swap with the real paths.
@@ -73,7 +72,7 @@ public:
         this->detectLoops(); //Always filter out loops. We don't specifically want to print those in monotonic order.
         for(Path& path : this->paths)
         {
-            if(path.is_closed || path.vertices->size() <= 1)
+            if(path.is_closed || path.vertices.size() <= 1)
             {
                 reordered.push_back(path);
             }
